@@ -7,8 +7,18 @@
 
 import UIKit
 import Moya
-import Alamofire
+//import Alamofire
 import RxSwift
+
+enum API: String {
+    case dev    = "https://jsonplaceholder.typicode.com"
+    case real   = "https://jsonplaceholder2.typicode.com"
+}
+
+struct APIService {
+    fileprivate let provider = MoyaProvider<ForumService>(plugins: [NetworkLoggerPlugin(verbose: true)])
+    static let environment: API = .dev
+}
 
 enum ForumService {
     case getPosts
@@ -16,13 +26,17 @@ enum ForumService {
 }
 
 // https://medium.com/@mattiacontin/better-networking-with-moya-rxswift-a90d821f1ce8
-
+// https://pilgwon.github.io/blog/2017/10/10/RxSwift-By-Examples-3-Networking.html
+// https://ios-development.tistory.com/193
 extension ForumService: TargetType {
     
     
     // This is the base URL we'll be using, typically our server.
     var baseURL: URL {
-    return URL(string: "https://jsonplaceholder.typicode.com")!
+        guard let url = URL(string: APIService.environment.rawValue) else {
+            fatalError("invalid URL")
+        }
+        return url
     }
 
     // This is the path of each operation that will be appended to our base URL.
@@ -49,6 +63,7 @@ extension ForumService: TargetType {
     // Here we specify body parameters, objects, files etc.
     // or just do a plain request without a body.
     // In this example we will not pass anything in the body of the request.
+    // 리퀘스트에 사용되는 파라미터 설정
     var task: Task {
         return .requestPlain
     }
@@ -61,8 +76,72 @@ extension ForumService: TargetType {
 
     // This is sample return data that you can use to mock and test your services,
     // but we won't be covering this.
+    // 테스트용 Mock이나 Stub
     var sampleData: Data {
         return Data()
+    }
+    
+    // 허용할 response의 타입
+    var validationType: ValidationType {
+        return .successCodes
+    }
+}
+
+enum DecodeError: Error {
+    case decodeError
+}
+
+public class NetworkManager {
+    
+    static let shared = NetworkManager()
+
+    let bag = DisposeBag()
+
+    lazy var provider: MoyaProvider<ForumService> = {
+        return .init()
+    }()
+
+    public init() { }
+
+    func process<T: Codable, E>(
+        type: T.Type,
+        result: Result<Response, MoyaError>,
+        completion: @escaping (Result<E, Error>) -> Void
+    ) {
+        switch result {
+        case .success(let response):
+            if let data = try? JSONDecoder().decode(type, from: response.data) {
+                completion(.success(data as! E))
+            } else {
+                completion(.failure(DecodeError.decodeError))
+            }
+        case .failure(let error):
+            completion(.failure(error))
+        }
+    }
+    
+    public func getPost(completion: @escaping (Result<MyStatusModel.Response, Error>) -> Void) {
+        provider.request(.getPosts) { result in
+            print(result)
+//            self.process(type: MyStatusModel.Response, result: result, completion: completion)
+        }
+    }
+//    public func getPosts(completion: @escaping (Swift.Result<MyStatusModel.Response, Error>) -> Void) {
+//        provider.request(.getPosts) { result in
+//            self.process(type: MyStatusModel.self, result: result, completion: completion)
+//        }
+//    }
+}
+
+public struct MyStatusModel: Codable {
+    public struct Request {
+    }
+
+    public struct Response: Codable {
+        let userId: Int?
+        let id: Int?
+        let title: String?
+        let body: String?
     }
 }
 
@@ -123,6 +202,10 @@ class ViewController: UIViewController {
         ForumNetworkManager.shared.getPosts().subscribe { event in
             print(event[0])
         }.disposed(by: disposeBag)
+        
+        NetworkManager.shared.getPost { item in
+            print(item)
+        }
     }
 }
 
