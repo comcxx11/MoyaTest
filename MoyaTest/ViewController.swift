@@ -211,6 +211,21 @@ struct ForumNetworkManager {
         }   
     }
     */
+    
+    // [ retry ]
+    /*
+    internal func getGameList(limit:Int?,offset: Int?) -> Observable<[GameViewModel]> {
+        let param = ["limit": "\(limit ?? self.limit)",
+            "offset": "\(offset ?? 0)"]
+        return provider.rx.request(.getTopGame(param))
+        	.retry(3)
+        	.asObservable()
+            .map { try JSONDecoder().decode(GamesStruct.self, from: $0.data) }
+            .catchErrorJustReturn(nil)
+            .map { $0?.top ?? [] }
+            .map { $0.enumerated().map { GameViewModel(game: $1, offset: self.offset) } }
+    }
+    */
 }
 
 enum ExampleError: Error {
