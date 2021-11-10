@@ -180,6 +180,37 @@ struct ForumNetworkManager {
             .asObservable().ignoreElements()            // we're converting to Observable and ignoring events in order to return a Completable, which skips onNext and only maps to onCompleted
     }
     
+    // rx swift
+    /*
+    func test() {
+        provider.rx.request(.userProfile("ashfurrow")).subscribe { event in
+            switch event {
+            case let .success(response):
+                image = UIImage(data: response.data)
+            case let .error(error):
+                print(error)
+            }
+        }   
+    }
+    */
+    
+    /*
+    func test2() {
+        provider.request(.zen) { result in
+        switch result {
+            case let .success(moyaResponse):
+                let data = moyaResponse.data
+                let statusCode = moyaResponse.statusCode
+                // do something with the response data or statusCode
+            case let .failure(error):
+                // this means there was a network failure - either the request
+                // wasn't sent (connectivity), or no response was received (server
+                // timed out).  If the server responds with a 4xx or 5xx error, that
+                // will be sent as a ".success"-ful response.
+            }
+        }   
+    }
+    */
 }
 
 enum ExampleError: Error {
