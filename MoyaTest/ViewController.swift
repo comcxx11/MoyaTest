@@ -10,8 +10,9 @@ import Moya
 //import Alamofire
 import RxSwift
 
+
 enum API: String {
-    case dev    = "https://jsonplaceholder.typicode.com"
+    case dev    = "https://jsonplaceholder3.typicode.com"
     case real   = "https://jsonplaceholder2.typicode.com"
 }
 
@@ -145,6 +146,8 @@ public struct MyStatusModel: Codable {
     }
 }
 
+
+
 struct ForumNetworkManager {
 
     // I'm using a singleton for the sake of demonstration and other lies I tell myself
@@ -170,6 +173,41 @@ struct ForumNetworkManager {
                 // todo parse error and figure out what happened
                 throw ExampleError.somethingHappened
             }
+    }
+    
+    // https://medium.com/@alexandrosbaramilis/building-breather-part-4-bonus-smooth-api-error-handling-with-moya-rxswift-custom-operators-992ce377f1d1
+    func getPostsError() -> Single<[PostJSON]> {
+        return provider.rx                              // we use the Reactive component for our provider
+            .request(.getPosts)                         // we specify the call
+            .flatMap({ response in
+                guard (200...299).contains(response.statusCode) else {
+                    throw MoyaError.statusCode(response)
+//                    do {
+//                        let res = try response.map([PostJSON].self)
+//                        throw MoyaError.statusCode(response)
+//                    } catch {
+//                        throw error
+//                    }
+                }
+                return .just(response)
+            })
+            .filterSuccessfulStatusAndRedirectCodes()   // we tell it to only complete the call if the operation is successful, otherwise it will give us an error
+            .map([PostJSON].self)                       // we map the response to our Codable objects
+            .catchError { error in
+                // this function catches any error that happens,
+                // you can recover and continue the sequence with another observable,
+                // but we're not doing this right now
+                
+                // todo parse error and figure out what happened
+                
+                throw ExampleError.somethingHappened
+            }
+    }
+    
+    func test2() -> Single<[PostJSON]> {
+        return provider.rx
+            .request(.getPosts)
+            .map([PostJSON].self)
     }
     
     // Here we return a Completable because we only need to know if the call is done or if there was an error.
@@ -256,9 +294,19 @@ class ViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        ForumNetworkManager.shared.getPosts().subscribe { event in
+        
+        ForumNetworkManager.shared.getPostsError().subscribe { event in
             print(event[0])
         }.disposed(by: disposeBag)
+        
+        ForumNetworkManager.shared.getPosts()
+            .subscribe { data in
+                print(data[0])
+            } onError: { error in
+                print(error)
+            }.disposed(by: disposeBag)
+
+
         
         NetworkManager.shared.getPost { item in
             print(item)
