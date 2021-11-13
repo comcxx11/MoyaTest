@@ -180,6 +180,17 @@ struct ForumNetworkManager {
             .asObservable().ignoreElements()            // we're converting to Observable and ignoring events in order to return a Completable, which skips onNext and only maps to onCompleted
     }
     
+    func simepleGetPost() {
+        provider.rx.request(.getPosts).subscribe { event in
+            switch event {
+            case let .success(response):
+                print(response.data)
+            case let .error(error):
+                print(error)
+            }
+        }.disposed(by: DisposeBag())
+    }
+    
     // rx swift
     /*
     func test() {
@@ -252,6 +263,17 @@ class ViewController: UIViewController {
         NetworkManager.shared.getPost { item in
             print(item)
         }
+        
+        let provider = MoyaProvider<ForumService>(plugins: [NetworkLoggerPlugin(verbose: true)])
+        
+        provider.rx.request(.getPosts).map([PostJSON].self).subscribe {
+            switch $0 {
+            case let .success(response):
+                print(response)
+            case let .error(error):
+                print(error)
+            }
+        }.disposed(by: disposeBag)
     }
 }
 
